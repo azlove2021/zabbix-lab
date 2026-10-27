@@ -73,9 +73,20 @@ sudo bash scripts/install-zabbix-server.sh --check
 
 ### 方式二：跟文档手动走（推荐第一次）
 
-[`docs/Zabbix-7.0-LTS-安装部署实战.md`](docs/Zabbix-7.0-LTS-安装部署实战.md)
+| 文档 | 讲什么 | 谁该看 |
+|------|--------|--------|
+| [**Zabbix 使用手册（小白版）**](docs/Zabbix-使用手册.md) | 装好之后怎么用：看数据、看曲线、改阈值、改采集间隔、加监控项 | **刚上手，只想用起来** |
+| [**Zabbix 7.0 LTS 安装部署实战**](docs/Zabbix-7.0-LTS-安装部署实战.md) | 从零装出来：VM、数据库、服务端、前端、接主机、排错 | 想复现环境 / 搞懂原理 |
 
-文档把每一步「命令 + 为什么 + 预期输出」都写全了，出问题能自己对上日志。一共 12 章。
+两份文档都按「命令 + 为什么 + 预期输出」写，每一步都能自己对上日志。
+
+**登录信息**（两篇通用）：
+
+| 项目 | 值 |
+|------|-----|
+| Zabbix Web | `http://<服务器IP>:8080` · `Admin` / `zabbix` |
+| SSH | `root` / `Zbx_2026_Lab`（或 `zbx` / 同密码） |
+| 数据库 | `zabbix` / `Zbx_2026_Lab` |
 
 ### 虚拟机层
 
@@ -128,7 +139,8 @@ System uptime            911 s
 .
 ├── README.md
 ├── docs/
-│   └── Zabbix-7.0-LTS-安装部署实战.md      # 主文档，12 章
+│   ├── Zabbix-使用手册.md                  # 小白使用手册，11 章（看数据/改参数）
+│   └── Zabbix-7.0-LTS-安装部署实战.md      # 部署主文档，12 章
 ├── scripts/
 │   ├── install-zabbix-server.sh            # 服务端一键部署（幂等）
 │   ├── install-zabbix-agent.sh             # Agent 一键部署 + ACL 配置

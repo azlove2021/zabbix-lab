@@ -12,8 +12,71 @@
 
 ---
 
+## 0.0 小白必读：先看这一页
+
+### ① 所有账号密码，一张表搞定
+
+| 你要干什么 | 地址 / 位置 | 用户名 | 密码 |
+|---|---|---|---|
+| **打开 Zabbix 网页**（最常用） | `http://192.168.174.10:8080` | `Admin` | `zabbix` |
+| SSH 登录 **Zabbix 服务器** | `192.168.174.10`，端口 `22` | `root` | `Zbx_2026_Lab` |
+| 同上（普通账号，更规范） | `192.168.174.10` | `zbx` | `Zbx_2026_Lab` |
+| SSH 登录 **被监控机** | `192.168.174.11`，端口 `22` | `root` | `Zbx_2026_Lab` |
+| 连 **Zabbix 数据库** | 在服务器上执行 `mysql -uzabbix -p` | `zabbix` | `Zbx_2026_Lab` |
+| **MySQL 管理员** | 在服务器上执行 `sudo mysql` | `root` | **不用密码** |
+
+> ⚠️ **三个密码长得像，千万别搞混：**
+>
+> | 密码 | 用在哪 | 记住它的特征 |
+> |---|---|---|
+> | `zabbix` | Zabbix **网页**登录 | 全小写，6 个字母，Zabbix 软件自带的默认密码 |
+> | `Zbx_2026_Lab` | **Linux 系统** SSH、数据库 | 首字母大写，有下划线，是我装系统时设的 |
+> | 没有密码 | MySQL 的 root | Ubuntu 上 `sudo mysql` 直接进，问了就是没设 |
+>
+> 网页登录时用户名是 **`Admin`（大写 A）**，密码是 **`zabbix`（全小写）**。这一对最容易输错。
+
+### ② 这份文档现在该看哪一章
+
+这套环境在 **2026-10-27 已经全部装好了**，你现在不需要从头跑一遍：
+
+| 章节 | 状态 | 你要不要看 |
+|------|------|-----------|
+| 第 1-2 章 | 原理介绍 | 想搞懂"为什么"就看，赶时间可跳 |
+| 第 3-5 章 | ✅ 已完成 | **不用再跑**，出问题了回来查 |
+| 第 6 章（方案一） | ✅ 已完成 | 不用跑 |
+| 第 7 章（方案二） | ⏳ 差一步 | **要做**：云控制台放行 10050 端口 |
+| 第 8-10 章 | 验收与排错 | 出问题时查 |
+| 第 11 章 | 简历与面试 | 准备面试时看 |
+| 第 12 章 | 附录与踩坑 | 想复现环境时看 |
+
+**如果你只是想"用起来"，跳去看 [《Zabbix 使用手册》](Zabbix-使用手册.md)。**
+本文档讲的是"怎么把它装出来"，使用手册讲的是"装好之后怎么用"。
+
+### ③ 名词小抄（看不懂术语时回来查）
+
+| 名词 | 英文 | 通俗解释 |
+|------|------|----------|
+| 主机 | Host | 一台被监控的机器 |
+| 监控项 | Item | 要采集的**一个具体指标**，比如"CPU 使用率""根分区剩余空间" |
+| 触发器 | Trigger | 判断"这个指标是不是不正常"的规则，比如"CPU > 90% 就报警" |
+| 模板 | Template | 把几十个监控项和触发器**打包**，挂到主机上一键生效 |
+| 动作 | Action | 报警成立后**要做什么**（发邮件、跑脚本、发 Webhook） |
+| 媒介 | Media type | 用**什么方式**通知你（邮件 / Webhook / 短信） |
+| 最新数据 | Latest data | 所有指标此刻的数值 |
+| 图表 | Graph | 某个指标的历史曲线 |
+| 宏 | Macro | 可替换的"参数变量"，形如 `{$MEMORY.UTIL.MAX}`，改它就能改阈值 |
+
+### ④ 三条给新手的提醒
+
+1. **看到红色不要慌**。红色 `ZBX` 只代表"连不上这台机器的 Agent"，最常见原因就三个：机器没开机、防火墙/安全组没放行、`Server=` 填错。
+2. **改了配置没反应？** Zabbix 有 60 秒配置缓存，等一分钟；等不及就在服务器上执行 `sudo zabbix_server -R config_cache_reload`。
+3. **不要直接改模板里的东西**。模板是所有主机共用的，改了会影响别人。要改就改**自己主机上的"宏"**（第 6 章有例子）。
+
+---
+
 ## 目录
 
+- [0.0 小白必读：先看这一页](#00-小白必读先看这一页)
 - [0. 总览：你要建的东西长什么样](#0-总览你要建的东西长什么样)
 - [1. 版本选型：为什么必须是 7.0 LTS](#1-版本选型为什么必须是-70-lts)
 - [2. 架构速览（面试必考）](#2-架构速览面试必考)
@@ -50,7 +113,7 @@ flowchart TB
 
     BROWSER --> VM1
     VM1 -- "被动采集 10050" --> VM2
-    VM1 -- "被动采集 10050<br/>穿家宽 NAT<br/>源 IP = 223.73.55.49" --> VM3
+    VM1 -- "被动采集 10050<br/>穿家宽 NAT<br/>源 IP = 203.0.113.45" --> VM3
 ```
 
 **关键点**：两个方案**共用同一台 Zabbix Server**。你不用装两套，方案二只是在方案一的基础上多接一台"远方的机器"。
@@ -75,7 +138,7 @@ flowchart TB
 |---|---|---|
 | 网络路径 | VM → VM，同一虚拟交换机 | VM → 家宽 NAT → 公网 → 京东云 |
 | 主要坑 | 几乎没有 | **`Server=` 填什么**、安全组、家宽 IP 会变 |
-| `Server=` 填什么 | `192.168.174.10` | **`223.73.55.49`**（你家宽出口 IP，不是 VM 内网 IP） |
+| `Server=` 填什么 | `192.168.174.10` | **`203.0.113.45`**（你家宽出口 IP，不是 VM 内网 IP） |
 | 预计耗时 | 装完 Server 后 10 分钟 | 15 分钟（前提是安全组能改） |
 
 ### 0.4 当前实际部署状态（2026-10-27 已完成）
@@ -106,8 +169,8 @@ flowchart TB
 
 实测数据（zbx-node1）：CPU 0.57%、内存 16.6%、可用内存 1.72 GB、运行 911 秒 —— 说明采的是真实数据，不是占位值。
 
-> **方案二你只需要做一件事**：京东云控制台 → 安全组 → 入站规则 → 添加 `TCP:10050`，源 `223.73.55.49/32`。
-> 云主机侧我已经配好了（`Server=127.0.0.1,223.73.55.49`、`Hostname=zbx-cloud-01`），端口一放行，1 分钟内自动变绿。
+> **方案二你只需要做一件事**：京东云控制台 → 安全组 → 入站规则 → 添加 `TCP:10050`，源 `203.0.113.45/32`。
+> 云主机侧我已经配好了（`Server=127.0.0.1,203.0.113.45`、`Hostname=zbx-cloud-01`），端口一放行，1 分钟内自动变绿。
 
 ### 部署完成后的界面
 
@@ -668,47 +731,65 @@ Zabbix server started
 
 ## 5. Web 前端初始化
 
-浏览器（**在你 Windows 上**）打开：
+### 5.1 打开网页并登录
+
+**第一步：在浏览器地址栏输入下面这个地址**（在你 Windows 上打开，不是虚拟机里）：
 
 ```
 http://192.168.174.10:8080
 ```
 
-打不开的话先自查：
+**第二步：用下面这组账号密码登录**
+
+| 输入框 | 填什么 | 注意 |
+|--------|--------|------|
+| **Username**（用户名） | `Admin` | **大写 A**，其余小写 |
+| **Password**（密码） | `zabbix` | **全小写**，6 个字母 |
+
+点 **Sign in** 按钮。
+
+> 💡 **这是 Zabbix 软件自带的出厂默认账号**，全世界装的 Zabbix 初始都是这一对。
+> 所以装完第一件事应该是改掉它——见 5.3。
+>
+> 如果提示 `Incorrect user name or password`：
+> - 用户名是不是输成了 `admin`（小写）→ 必须是 `Admin`
+> - 密码是不是输成了 `Zabbix`（大写）→ 必须是全小写 `zabbix`
+> - 大小写都对了还进不去 → 看 5.2 的排查
+
+**第三步：登录成功后你应该看到什么**
+
+- 页面顶部**没有**红色横幅（如果有 `Zabbix server is not running`，说明服务端没起，回 4.7）
+- 左侧菜单有 `Monitoring` / `Data collection` / `Alerts` / `Administration` 四组
+- 默认停在 `Dashboards` 页
+
+### 5.2 打不开网页或登录不了怎么办
+
+**先自查网页通不通**：
 
 ```bash
-curl -sI http://127.0.0.1:8080 | head -1     # HTTP/1.1 200 OK
+curl -sI http://127.0.0.1:8080 | head -1     # 期望 HTTP/1.1 200 OK
 sudo tail -20 /var/log/nginx/error.log
 ```
 
-### 5.1 六步向导
+分情况对照：
 
-| 步骤 | 页面 | 填什么 |
-|------|------|--------|
-| 1 | Welcome | 语言选 **English**，Next |
-| 2 | Check of pre-requisites | 全绿就行；红的按提示 `apt install php8.3-xxx` 后刷新 |
-| 3 | Configure DB connection | **Host** `localhost` · **Name** `zabbix` · **User** `zabbix` · **Password** 你设的密码 |
-| 4 | Settings | Server name `Zabbix Lab` · Timezone `Asia/Shanghai` · Theme `Dark` |
-| 5 | Summary | 核对 |
-| 6 | Install | Finish |
+| 你看到的 | 原因 | 怎么办 |
+|----------|------|--------|
+| 浏览器一直转圈、最后超时 | 虚拟机没开机，或 IP 输错了 | 双击 `D:\VMs\start-vms.cmd` 启动；确认是 `192.168.174.10` |
+| `502 Bad Gateway` | PHP-FPM 没起 | `sudo systemctl restart php8.3-fpm` |
+| 浏览器**直接下载**一个 `index.php` 文件 | PHP 没生效 | `sudo systemctl status php8.3-fpm`，看是不是 fail |
+| `403 Forbidden` | 目录权限不对 | `sudo chown -R www-data:www-data /usr/share/zabbix` |
+| 出现 Zabbix 的"安装向导"而不是登录页 | 前端配置文件丢了 | 见 5.4 |
 
-> **语言建议保持 English**。学习期间用英文——所有报错、官方文档、面试术语都是英文，中文界面会让你没法把日志和菜单对上号。
-
-第 3 步报 `Cannot connect to the database`，用命令行同参数试：
-
-```bash
-mysql -h localhost -uzabbix -p'Zbx_2026_Lab' zabbix -e "select 1;"
-```
-
-命令行能连、向导不能连 → 看 `/etc/zabbix/web/zabbix.conf.php` 有没有生成、`www-data` 有没有读权限。
-
-### 5.2 首次登录后立刻做的 3 件事
+### 5.3 首次登录后立刻做的 3 件事
 
 ```text
-① 改密码：Users → Users → Admin → Change password
-   （顺手把 Authentication 的 Auto-logout 改成 15m，默认 15s 太烦）
+① 改密码（重要）
+   点左下角头像 / Users → Users → 找到 Admin → Change password
+   （顺手把 Authentication 里的 Auto-logout 改成 15m，默认 15s 太烦）
 
-② 确认没有红条：页面顶部不该出现 "Zabbix server is not running"
+② 确认服务端正常
+   页面顶部不该出现红色 "Zabbix server is not running"
    有的话 → Server 进程没起，或 10051 不通，回 4.7
 
 ③ 认识四个主菜单（简历上要说得出）
@@ -719,6 +800,48 @@ mysql -h localhost -uzabbix -p'Zbx_2026_Lab' zabbix -e "select 1;"
 ```
 
 登录后你会看到 **1 台主机**：`Zabbix server`（安装时自动创建的本地主机，接口 `127.0.0.1:10050`）。**这就是你的第一台被监控主机**，说明链路已经通了，等 ZBX 变绿即可。
+
+### 5.4 如果走进"安装向导"页面
+
+正常情况下你**不应该**看到安装向导——我在部署时已经直接写好了配置文件，跳过了那 6 步。
+
+如果你确实看到了向导（比如重装了前端），说明这个文件没了：
+
+```bash
+sudo ls -l /etc/zabbix/web/zabbix.conf.php
+```
+
+有两种处理方式：
+
+**方式 A（快）**：直接用现成的配置模板恢复
+
+```bash
+sudo mkdir -p /etc/zabbix/web
+sudo cp /tmp/zabbix.conf.php /etc/zabbix/web/zabbix.conf.php   # 模板在仓库 vm-builder/ 下
+sudo chown www-data:www-data /etc/zabbix/web/zabbix.conf.php
+sudo chmod 640 /etc/zabbix/web/zabbix.conf.php
+```
+
+**方式 B（跟着向导点）**：那就按向导走，6 步分别是
+
+| 步骤 | 页面 | 填什么 |
+|------|------|--------|
+| 1 | Welcome | 语言选 **English**，Next |
+| 2 | Check of pre-requisites | 全绿就行；红的按提示 `apt install php8.3-xxx` 后刷新 |
+| 3 | Configure DB connection | **Host** `localhost` · **Name** `zabbix` · **User** `zabbix` · **Password** `Zbx_2026_Lab` |
+| 4 | Settings | Server name `Zabbix Lab` · Timezone `Asia/Shanghai` · Theme `Dark` |
+| 5 | Summary | 核对 |
+| 6 | Install | Finish |
+
+> 语言建议保持 **English**。所有报错日志、官方文档、面试术语都是英文，中文界面会让你没法把日志和菜单对上号。
+
+第 3 步报 `Cannot connect to the database`，用命令行同参数试：
+
+```bash
+mysql -h localhost -uzabbix -p'Zbx_2026_Lab' zabbix -e "select 1;"
+```
+
+命令行能连、向导不能连 → 看 `/etc/zabbix/web/zabbix.conf.php` 有没有生成、`www-data` 有没有读权限。
 
 ---
 
@@ -879,7 +1002,7 @@ sudo zabbix_server -R config_cache_reload
 
 ```
 你的 Windows / VM          家宽路由器（NAT）           京东云
-192.168.174.10  ────────>  223.73.55.49  ────────>  117.72.187.2:10050
+192.168.174.10  ────────>  203.0.113.45  ────────>  117.72.187.2:10050
                            ↑ 源 IP 被改成这个         ↑ agent 拿它去比对 Server=
 ```
 
@@ -895,14 +1018,14 @@ ss -tn | grep ':22 '
 本次实测输出（你的 MobaXterm 那条连接）：
 
 ```
-ESTAB 0 384 [::ffff:172.16.0.3]:22 [::ffff:223.73.55.49]:65100
+ESTAB 0 384 [::ffff:172.16.0.3]:22 [::ffff:203.0.113.45]:65100
                                        ↑ 这就是你家宽出口 IP
 ```
 
-**记下 `223.73.55.49`** —— 方案二全程用它。
+**记下 `203.0.113.45`** —— 方案二全程用它。
 
 > 它是**动态的**，宽带重播号会变。变了以后 agent 会拒绝连接，日志长这样：
-> `connection from "1.2.3.4" rejected, allowed hosts: "223.73.55.49"`
+> `connection from "1.2.3.4" rejected, allowed hosts: "203.0.113.45"`
 > 处理办法见 7.7。
 
 ### 7.3 云服务器侧：改 Agent 配置
@@ -922,7 +1045,7 @@ grep -nE '^(Server|ServerActive|Hostname)=' /etc/zabbix/zabbix_agent2.conf
 cp /etc/zabbix/zabbix_agent2.conf /root/zabbix_agent2.conf.bak
 
 # ① 允许你家宽出口 IP 来拉我（保留 127.0.0.1 方便本地自测）
-sed -i 's|^Server=.*|Server=127.0.0.1,223.73.55.49|' /etc/zabbix/zabbix_agent2.conf
+sed -i 's|^Server=.*|Server=127.0.0.1,203.0.113.45|' /etc/zabbix/zabbix_agent2.conf
 
 # ② 主机名
 sed -i 's|^Hostname=.*|Hostname=zbx-cloud-01|' /etc/zabbix/zabbix_agent2.conf
@@ -949,7 +1072,7 @@ ss -tlnp | grep 10050
 
 | 协议 | 端口 | 源地址 | 策略 | 说明 |
 |------|------|--------|------|------|
-| TCP | 10050 | `223.73.55.49/32` | 允许 | 只放行你家 IP |
+| TCP | 10050 | `203.0.113.45/32` | 允许 | 只放行你家 IP |
 
 > **绝对不要填 `0.0.0.0/0`。** Agent 暴露在公网意味着任何人都能拉取数据，配了 `system.run[]` 的话还能执行命令。限源 IP 是必须的——这一点写进简历也是加分项。
 
@@ -958,10 +1081,10 @@ ss -tlnp | grep 10050
 ```bash
 ufw status
 # 如果 active：
-ufw allow from 223.73.55.49 to any port 10050 proto tcp
+ufw allow from 203.0.113.45 to any port 10050 proto tcp
 
 # 如果用 iptables
-iptables -I INPUT -p tcp -s 223.73.55.49 --dport 10050 -j ACCEPT
+iptables -I INPUT -p tcp -s 203.0.113.45 --dport 10050 -j ACCEPT
 ```
 
 > 你这台机器实测 `ufw` 未启用，所以主要靠安全组。
@@ -1014,7 +1137,7 @@ tail -20 /var/log/zabbix/zabbix_agent2.log
 
 ### 7.7 出口 IP 变了怎么办
 
-家宽重播号后 `223.73.55.49` 可能变，表现为：**刚才是绿的，突然变红**，agent 日志出现 `rejected, allowed hosts: "223.73.55.49"`。
+家宽重播号后 `203.0.113.45` 可能变，表现为：**刚才是绿的，突然变红**，agent 日志出现 `rejected, allowed hosts: "203.0.113.45"`。
 
 **处理流程（3 分钟）**：
 
@@ -1043,7 +1166,7 @@ systemctl restart zabbix-agent2
 
 ```bash
 # 云服务器上
-sed -i 's|^ServerActive=.*|ServerActive=223.73.55.49|' /etc/zabbix/zabbix_agent2.conf
+sed -i 's|^ServerActive=.*|ServerActive=203.0.113.45|' /etc/zabbix/zabbix_agent2.conf
 sed -i 's|^Server=.*|Server=127.0.0.1|' /etc/zabbix/zabbix_agent2.conf   # 被动可以关掉
 systemctl restart zabbix-agent2
 ```
@@ -1373,7 +1496,7 @@ bash vm-ctl.sh web             # 直接打开 Zabbix 页面
 sudo bash install-zabbix-agent.sh 192.168.174.10 zbx-node1
 
 # 方案二：在京东云 117.72.187.2 上
-sudo bash install-zabbix-agent.sh 223.73.55.49 zbx-cloud-01
+sudo bash install-zabbix-agent.sh 203.0.113.45 zbx-cloud-01
 ```
 
 装完脚本会自动跑一次 `zabbix_get` 自检，返回 `1` 才算成功。
@@ -1535,7 +1658,7 @@ vmware-vdiskmanager.exe -x 40GB "D:\VMs\zbx-server\disk.vmdk"
 | schema 4.1MB、203 张表、模板名 `Linux by Zabbix agent` | 解包 `server.sql.gz` 后 grep |
 | `zabbix-agent2` 7.0.32 行为、ACL 拒绝日志原文 | 在云服务器上真实安装并故意配错复现 |
 | MySQL 8.0.46 / MariaDB 10.11.14 候选版本 | `apt-cache policy` |
-| 你家出口公网 IP `223.73.55.49` | 云服务器 `ss -tn \| grep :22` 反查 |
+| 你家出口公网 IP `203.0.113.45` | 云服务器 `ss -tn \| grep :22` 反查 |
 | 版本支持矩阵（7.0 LTS → 2029-06-30） | Zabbix 官方 requirements 文档 |
 | **两台 Ubuntu 虚拟机（24.04.5、内核 6.8、40G/20G 磁盘）** | 本次真实创建并启动，SSH 进 guest 验证 |
 | **Zabbix Server 7.0.32 完整安装（203 张表、四服务 active、端口监听）** | 用 `install-zabbix-server.sh` 真跑一遍 |
