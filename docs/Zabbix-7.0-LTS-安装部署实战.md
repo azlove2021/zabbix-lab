@@ -1,5 +1,8 @@
 # Zabbix 7.0 LTS 双场景实战
 
+> 🔗 **GitHub 仓库**：<https://github.com/azlove2021/zabbix-lab>
+> 包含本文档、一键部署脚本、虚拟机自动化构建脚本与全部截图。
+>
 > **两个方案都要落地，共用一个 Zabbix 服务端。**
 >
 > - **方案一**：Server 装在你本地 VMware → 监控 VMware 内的 Ubuntu 虚拟机（内网闭环）
