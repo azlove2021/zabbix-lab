@@ -600,3 +600,196 @@ now-7d       7 天前
 
 > **遇到文档里对不上的地方**：Zabbix 版本不同菜单名会有细微差别，但字段含义一致。
 > 实在找不到，用浏览器 `Ctrl+F` 在页面上搜字段名（比如 `Update interval`）。
+
+---
+
+## 11. 附录 A：安装中文界面（含时区修正）
+
+### 11.1 现象
+
+在 `用户设置 → 配置 → 语言` 下拉里能看到「简体中文 (zh_CN)」，但一选就弹黄条：
+
+> You are not able to choose some of the languages, because locales for them are not installed on the web server.
+>
+> （无法选择部分语言，因为 Web 服务器上没有安装对应的 locale）
+
+### 11.2 原因：不是 Zabbix 缺翻译，是操作系统缺 locale
+
+Zabbix 要显示某种语言，**三个条件必须同时满足**：
+
+| # | 条件 | 在哪一层 | 怎么查 |
+|---|------|---------|--------|
+| ① | 操作系统生成了该 **locale** | 系统 | `locale -a \| grep zh_CN` |
+| ② | PHP 装了 **gettext** 扩展 | PHP | `php -m \| grep gettext` |
+| ③ | Zabbix 有该语言的**翻译文件** | 前端目录 | `ls /usr/share/zabbix/locale/zh_CN/LC_MESSAGES/` |
+
+本机实测结果：**② 和 ③ 本来就满足**，只缺 ①。
+
+```bash
+$ locale -a | grep zh_CN
+（无输出 ← 问题就在这）
+
+$ php -m | grep gettext
+gettext
+
+$ ls /usr/share/zabbix/locale/zh_CN/LC_MESSAGES/
+frontend.mo          ← 翻译文件有 417 KB，是齐的
+```
+
+Ubuntu 默认不会生成中文 locale（`/etc/locale.gen` 里是注释掉的），这是省空间的做法。
+
+### 11.3 安装：三条命令
+
+```bash
+# ① 打开 zh_CN.UTF-8（把 /etc/locale.gen 里那一行的 # 去掉）
+sudo sed -i 's/^# *zh_CN\.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+
+# ② 生成 locale
+sudo locale-gen
+
+# ③ 重启 PHP-FPM，让网页进程认到新 locale
+sudo systemctl restart php8.3-fpm
+```
+
+`locale-gen` 的输出应该长这样：
+
+```text
+Generating locales (this might take a while)...
+  en_US.UTF-8... done
+  zh_CN.UTF-8... done
+Generation complete.
+```
+
+### 11.4 验证
+
+```bash
+locale -a | grep zh_CN
+# 期望：zh_CN.utf8
+
+php -r 'echo setlocale(LC_ALL, "zh_CN.UTF-8"), PHP_EOL;'
+# 期望：zh_CN.UTF-8  （返回 false 说明还没生效，检查是不是漏了第 ③ 步）
+```
+
+都通过后，**刷新网页**（不用重启 Zabbix 服务），进
+`用户设置 → 配置 → 语言` 选「简体中文 (zh_CN)」→ 点 **更新**。
+
+> 那个黄色警告条会直接消失，不需要改任何 Zabbix 配置。
+
+### 11.5 顺手修一个更隐蔽的问题：时区
+
+装完中文包我顺手看了一眼用户资料页，发现时区是 **`系统默认 (UTC+00:00) UTC`**——这是错的。
+
+**现象**：`当前问题` 里某条告警的时间显示 `14:18:45`，但你实际是 `22:18` 遇到的。**差了 8 小时。**
+
+**原因**：PHP 的 `date.timezone` 默认是 `UTC`，而 Zabbix 网页的所有时间显示都以它为准。
+（右上角那个大时钟是浏览器 JS 渲染的，所以它是对的——这个反差很容易让人误判。）
+
+**修法：**
+
+```bash
+# ① 让 PHP-FPM 用东八区
+echo 'php_value[date.timezone] = Asia/Shanghai' | sudo tee -a /etc/zabbix/php-fpm.conf
+
+# ② 系统时区也确认一下
+sudo timedatectl set-timezone Asia/Shanghai
+
+# ③ 重启
+sudo systemctl restart php8.3-fpm
+```
+
+**验证**：`用户设置 → 配置 → 时区` 应显示 **`系统默认 (UTC+08:00) Asia/Shanghai`**。
+
+修完之后再看 `当前问题`，时间就和你的手表对上了。
+
+![中文界面 + 正确时区](../screenshots/zbx_use_04_zh_profile.png)
+
+*装好之后就是这个样子：语言是「简体中文 (zh_CN)」，时区是「系统默认 (UTC+08:00) Asia/Shanghai」，黄色警告条消失了*
+
+### 11.6 中英文菜单对照表
+
+本文档用的是**英文菜单名**（因为排错日志、官方文档、面试术语都是英文）。
+但你装了中文界面之后，屏幕上看到的是中文——用这张表对照：
+
+**左侧主菜单**
+
+| 英文 | 中文 |
+|------|------|
+| Dashboards | 仪表盘 |
+| Monitoring | 监测 |
+| ├ Problems | 问题 |
+| ├ Hosts | 主机 |
+| └ Latest data | 最新数据 |
+| Services | 服务 |
+| Inventory | 资产记录 |
+| Reports | 报表 |
+| Data collection | 数据采集 |
+| ├ Hosts | 主机 |
+| ├ Templates | 模板 |
+| └ Maintenance | 维护 |
+| Alerts | 告警 |
+| ├ Actions | 动作 |
+| └ Media types | 报警媒介类型 |
+| Users | 用户 |
+| Administration | 管理 |
+| ├ General | 一般 |
+| ├ Housekeeping | 清理 |
+| └ Queue | 队列 |
+
+**页面上的字段**
+
+| 英文 | 中文 |
+|------|------|
+| User profile | 用户基本资料 |
+| Password | 密码 |
+| Language | 语言 |
+| Time zone | 时区 |
+| Theme | 主题 |
+| Auto-login | 自动登录 |
+| Auto-logout | 自动注销 |
+| Refresh | 刷新 |
+| Rows per page | 每页行数 |
+| Update / Cancel | 更新 / 取消 |
+| Macros | 宏 |
+| Items | 监控项 |
+| Triggers | 触发器 |
+| Update interval | 更新间隔 |
+| Expression | 表达式 |
+| Severity | 严重性 |
+| Acknowledge (Ack) | 确认 |
+| Host availability | 主机可用性 |
+| Current problems | 当前问题 |
+| System information | 系统信息 |
+
+**告警严重度**
+
+| 英文 | 中文 |
+|------|------|
+| Not classified | 未分类 |
+| Information | 信息 |
+| Warning | 警告 |
+| Average | 一般严重 |
+| High | 严重 |
+| Disaster | 灾难 |
+
+### 11.7 想改回英文？
+
+`用户设置 → 配置 → 语言` → 选 `English (en_US)` → 更新。
+
+> 建议：**学习阶段用英文，给同事演示时切中文**。
+> 因为搜报错、查官方文档、面试描述都用英文术语，中英对照能帮你两边都对上。
+
+### 11.8 命令行批量设置（不用点界面）
+
+```bash
+# 用 API 把 Admin 的语言改成中文
+curl -s -X POST http://192.168.174.10:8080/api_jsonrpc.php \
+  -H 'Content-Type: application/json-rpc' \
+  -d '{"jsonrpc":"2.0","method":"user.login","params":{"username":"Admin","password":"zabbix"},"id":1}'
+# 拿到返回值里的 token，再执行：
+curl -s -X POST http://192.168.174.10:8080/api_jsonrpc.php \
+  -H 'Content-Type: application/json-rpc' \
+  -H 'Authorization: Bearer <上一步的token>' \
+  -d '{"jsonrpc":"2.0","method":"user.update","params":{"userid":"1","lang":"zh_CN"},"id":2}'
+```
+
+> 语言代码表：`en_US` 英文、`zh_CN` 简体中文、`zh_TW` 繁体中文、`ja_JP` 日文。

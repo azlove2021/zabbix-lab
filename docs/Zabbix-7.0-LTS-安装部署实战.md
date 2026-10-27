@@ -729,6 +729,48 @@ Zabbix server started
 
 ---
 
+### 4.9 安装中文界面（可选，建议装上）
+
+Zabbix 自带中文翻译，但 **Ubuntu 默认不生成中文 locale**，所以语言下拉里能看到「简体中文」却选不了，一选就提示：
+
+> You are not able to choose some of the languages, because locales for them are not installed on the web server.
+
+三条命令解决：
+
+```bash
+# ① 打开 zh_CN.UTF-8（去掉 /etc/locale.gen 里那一行的注释）
+sudo sed -i 's/^# *zh_CN\.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+
+# ② 生成 locale
+sudo locale-gen
+
+# ③ 重启 PHP-FPM
+sudo systemctl restart php8.3-fpm
+```
+
+**验证**：
+
+```bash
+locale -a | grep zh_CN                          # 期望 zh_CN.utf8
+php -r 'echo setlocale(LC_ALL,"zh_CN.UTF-8");'  # 期望 zh_CN.UTF-8
+```
+
+然后刷新网页 → `用户设置 → 配置 → 语言` → 简体中文 (zh_CN) → 更新。
+
+**顺手把时区也修了**（PHP 默认 UTC，会让网页上的事件时间差 8 小时）：
+
+```bash
+echo 'php_value[date.timezone] = Asia/Shanghai' | sudo tee -a /etc/zabbix/php-fpm.conf
+sudo timedatectl set-timezone Asia/Shanghai
+sudo systemctl restart php8.3-fpm
+```
+
+改完后 `用户设置 → 时区` 应显示 `系统默认 (UTC+08:00) Asia/Shanghai`。
+
+> 完整原理、中英文菜单对照表见《[Zabbix 使用手册](Zabbix-使用手册.md)》第 11 章。
+
+---
+
 ## 5. Web 前端初始化
 
 ### 5.1 打开网页并登录
@@ -1316,6 +1358,8 @@ flowchart LR
 | `403 Forbidden` | 目录权限 | `chown -R www-data:www-data /usr/share/zabbix` |
 | 向导第 2 步有红项 | PHP 扩展缺失 | 照提示装 `php8.3-xxx` 后 restart |
 | 登录进不去 | 大小写 | 用户 `Admin`（大写 A），密码 `zabbix`（全小写） |
+| 语言选中文时提示 `locales for them are not installed` | 操作系统没生成 `zh_CN.UTF-8` | 见 4.9「安装中文界面」 |
+| 网页上的事件时间比本地时间差 8 小时 | PHP 的 `date.timezone` 默认是 UTC | 见 4.9，顺手一起修 |
 
 ### 10.4 采集阶段（ZBX 红叉）
 
