@@ -86,8 +86,8 @@ sudo bash scripts/install-zabbix-server.sh --check
 | 项目 | 值 |
 |------|-----|
 | Zabbix Web | `http://<服务器IP>:8080` · `Admin` / `zabbix` |
-| SSH | `root` / `Zbx_2026_Lab`（或 `zbx` / 同密码） |
-| 数据库 | `zabbix` / `Zbx_2026_Lab` |
+| SSH | `root` / `<实验密码>`（或 `zbx` / 同密码） |
+| 数据库 | `zabbix` / `<实验密码>` |
 
 ### 虚拟机层
 
@@ -176,7 +176,7 @@ System uptime            911 s
 
 ## 免责声明
 
-- 脚本里的密码 `Zbx_2026_Lab` 仅用于本地实验环境，**生产请自行替换**。
+- 实验密码不写进仓库：建 VM 前 `export LAB_PASS=...`，装服务端前 `export DB_PASS=...`。
 - 云主机接入时请务必用**单 IP 白名单**（`x.x.x.x/32`）而不要 `0.0.0.0/0`，Agent 暴露公网有风险。
 - 文档中的 IP、主机名、密码均为实验环境示例，请按自己的环境调整。
 
