@@ -19,10 +19,10 @@
 | 你要干什么 | 地址 / 位置 | 用户名 | 密码 |
 |---|---|---|---|
 | **打开 Zabbix 网页**（最常用） | `http://192.168.174.10:8080` | `Admin` | `zabbix` |
-| SSH 登录 **Zabbix 服务器** | `192.168.174.10`，端口 `22` | `root` | `Zbx_2026_Lab` |
-| 同上（普通账号，更规范） | `192.168.174.10` | `zbx` | `Zbx_2026_Lab` |
-| SSH 登录 **被监控机** | `192.168.174.11`，端口 `22` | `root` | `Zbx_2026_Lab` |
-| 连 **Zabbix 数据库** | 在服务器上执行 `mysql -uzabbix -p` | `zabbix` | `Zbx_2026_Lab` |
+| SSH 登录 **Zabbix 服务器** | `192.168.174.10`，端口 `22` | `root` | `<实验密码>` |
+| 同上（普通账号，更规范） | `192.168.174.10` | `zbx` | `<实验密码>` |
+| SSH 登录 **被监控机** | `192.168.174.11`，端口 `22` | `root` | `<实验密码>` |
+| 连 **Zabbix 数据库** | 在服务器上执行 `mysql -uzabbix -p` | `zabbix` | `<实验密码>` |
 | **MySQL 管理员** | 在服务器上执行 `sudo mysql` | `root` | **不用密码** |
 
 > ⚠️ **三个密码长得像，千万别搞混：**
@@ -30,7 +30,7 @@
 > | 密码 | 用在哪 | 记住它的特征 |
 > |---|---|---|
 > | `zabbix` | Zabbix **网页**登录 | 全小写，6 个字母，Zabbix 软件自带的默认密码 |
-> | `Zbx_2026_Lab` | **Linux 系统** SSH、数据库 | 首字母大写，有下划线，是我装系统时设的 |
+> | `<实验密码>` | **Linux 系统** SSH、数据库 | 首字母大写，有下划线，是我装系统时设的 |
 > | 没有密码 | MySQL 的 root | Ubuntu 上 `sudo mysql` 直接进，问了就是没设 |
 >
 > 网页登录时用户名是 **`Admin`（大写 A）**，密码是 **`zabbix`（全小写）**。这一对最容易输错。
@@ -151,12 +151,12 @@ flowchart TB
 | 镜像来源 | 清华镜像 `noble-server-cloudimg-amd64.vmdk`（590,749,696 字节） |
 | 系统 | **Ubuntu 24.04.5 LTS**，内核 `6.8.0-147-generic` |
 | 磁盘 | 40 GiB / 20 GiB（已由 cloud-init 自动扩展为 38G 根分区） |
-| 登录账号 | `root` / `Zbx_2026_Lab`（已开 root 密码登录）· `zbx` / `Zbx_2026_Lab`（sudo 免密） |
+| 登录账号 | `root` / `<实验密码>`（已开 root 密码登录）· `zbx` / `<实验密码>`（sudo 免密） |
 | SSH | `ssh root@192.168.174.10` / `ssh root@192.168.174.11`（22 端口，密码认证已开） |
 | 虚拟机注册 | 已注册进 Workstation 清单，并已在界面里打开过（顶部有 `zbx-server` / `zbx-node1` 标签，左下角列表也能看到） |
 | 一键启动 | 双击 `D:\VMs\start-vms.cmd`（后台启动，不需要开着 VMware 界面） |
 | Zabbix | **7.0.32** · MySQL 8.0 · Nginx 1.24.0 · PHP-FPM 8.3 |
-| 数据库 | 库 `zabbix` · 用户 `zabbix` / `Zbx_2026_Lab` · **203 张表** |
+| 数据库 | 库 `zabbix` · 用户 `zabbix` / `<实验密码>` · **203 张表** |
 | Web | **http://192.168.174.10:8080** · `Admin` / `zabbix` |
 
 `Data collection → Hosts` 三台主机：
@@ -435,7 +435,7 @@ VMware → 虚拟机 → 快照 → 拍摄快照，命名 `clean-ubuntu`。
 | **主机 IP** | `192.168.174.10` | `192.168.174.11` |
 | **端口** | `22` | `22` |
 | **用户名** | `root` 或 `zbx` | `root` 或 `zbx` |
-| **密码** | `Zbx_2026_Lab` | `Zbx_2026_Lab` |
+| **密码** | `<实验密码>` | `<实验密码>` |
 
 MobaXterm 操作：`Session` → `SSH` → 填 Remote host 和 Specify username → OK →
 首次连接会弹主机指纹，点 `Accept` → 输密码。
@@ -444,8 +444,8 @@ MobaXterm 操作：`Session` → `SSH` → 填 Remote host 和 Specify username 
 
 | 账号 | 说明 |
 |------|------|
-| `root` / `Zbx_2026_Lab` | 已额外开启 root 密码登录（**云镜像默认是禁止的**，我加了 `/etc/ssh/sshd_config.d/99-lab-root.conf`）。实验环境图省事用它 |
-| `zbx` / `Zbx_2026_Lab` | 普通用户 + `sudo` 免密。**更接近生产习惯**，简历里这么讲更专业 |
+| `root` / `<实验密码>` | 已额外开启 root 密码登录（**云镜像默认是禁止的**，我加了 `/etc/ssh/sshd_config.d/99-lab-root.conf`）。实验环境图省事用它 |
+| `zbx` / `<实验密码>` | 普通用户 + `sudo` 免密。**更接近生产习惯**，简历里这么讲更专业 |
 
 命令行验证：
 
@@ -600,7 +600,7 @@ sudo mysql
 
 ```sql
 create database zabbix character set utf8mb4 collate utf8mb4_bin;
-create user zabbix@localhost identified by 'Zbx_2026_Lab';
+create user zabbix@localhost identified by '<实验密码>';
 grant all privileges on zabbix.* to zabbix@localhost;
 set global log_bin_trust_function_creators = 1;
 quit;
@@ -617,7 +617,7 @@ quit;
 
 ```bash
 time zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz \
-  | mysql --default-character-set=utf8mb4 -uzabbix -p'Zbx_2026_Lab' zabbix
+  | mysql --default-character-set=utf8mb4 -uzabbix -p'<实验密码>' zabbix
 
 sudo mysql -e "set global log_bin_trust_function_creators = 0;"
 ```
@@ -630,7 +630,7 @@ sudo mysql -e "set global log_bin_trust_function_creators = 0;"
 **验证**：
 
 ```bash
-mysql -uzabbix -p'Zbx_2026_Lab' zabbix -Nse \
+mysql -uzabbix -p'<实验密码>' zabbix -Nse \
   "select count(*) from information_schema.tables where table_schema='zabbix';"
 ```
 
@@ -639,7 +639,7 @@ mysql -uzabbix -p'Zbx_2026_Lab' zabbix -Nse \
 ### 4.5 配置 Zabbix Server 连数据库
 
 ```bash
-sudo sed -i 's|^#[[:space:]]*DBPassword=.*|DBPassword=Zbx_2026_Lab|' /etc/zabbix/zabbix_server.conf
+sudo sed -i 's|^#[[:space:]]*DBPassword=.*|DBPassword=<实验密码>|' /etc/zabbix/zabbix_server.conf
 grep -n '^DB' /etc/zabbix/zabbix_server.conf
 ```
 
@@ -648,7 +648,7 @@ grep -n '^DB' /etc/zabbix/zabbix_server.conf
 ```
 105:DBName=zabbix
 121:DBUser=zabbix
-124:DBPassword=Zbx_2026_Lab
+124:DBPassword=<实验密码>
 ```
 
 > 其他默认值（实测）已经是对的，**不用动**：`LogFile=/var/log/zabbix/zabbix_server.log`、`PidFile=/run/zabbix/zabbix_server.pid`、`Timeout=4`。`DBHost` 不写 = 走本地 socket，性能最好，别改成 `127.0.0.1`。
@@ -874,7 +874,7 @@ sudo chmod 640 /etc/zabbix/web/zabbix.conf.php
 |------|------|--------|
 | 1 | Welcome | 语言选 **English**，Next |
 | 2 | Check of pre-requisites | 全绿就行；红的按提示 `apt install php8.3-xxx` 后刷新 |
-| 3 | Configure DB connection | **Host** `localhost` · **Name** `zabbix` · **User** `zabbix` · **Password** `Zbx_2026_Lab` |
+| 3 | Configure DB connection | **Host** `localhost` · **Name** `zabbix` · **User** `zabbix` · **Password** `<实验密码>` |
 | 4 | Settings | Server name `Zabbix Lab` · Timezone `Asia/Shanghai` · Theme `Dark` |
 | 5 | Summary | 核对 |
 | 6 | Install | Finish |
@@ -884,7 +884,7 @@ sudo chmod 640 /etc/zabbix/web/zabbix.conf.php
 第 3 步报 `Cannot connect to the database`，用命令行同参数试：
 
 ```bash
-mysql -h localhost -uzabbix -p'Zbx_2026_Lab' zabbix -e "select 1;"
+mysql -h localhost -uzabbix -p'<实验密码>' zabbix -e "select 1;"
 ```
 
 命令行能连、向导不能连 → 看 `/etc/zabbix/web/zabbix.conf.php` 有没有生成、`www-data` 有没有读权限。
