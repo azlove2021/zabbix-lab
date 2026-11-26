@@ -20,7 +20,7 @@ set -eu
 ZBX_MAJOR="${ZBX_MAJOR:-7.0}"
 DB_NAME="${DB_NAME:-zabbix}"
 DB_USER="${DB_USER:-zabbix}"
-DB_PASS="${DB_PASS:-Zbx_2026_Lab}"
+DB_PASS="${DB_PASS:?请先 export DB_PASS=你的数据库密码}"
 WEB_PORT="${WEB_PORT:-8080}"
 MODE="${1:-install}"
 
@@ -86,7 +86,7 @@ need_root
 # DB_PASS 要写进 SQL 和 sed，含这些字符会出错
 case "${DB_PASS}" in
   *"'"*|*'"'*|*'\'*|*'|'*|*'&'*|*' '*)
-    die "DB_PASS 不能包含引号、反斜杠、竖线、& 或空格，换一个（例：Zbx_2026_Lab）" ;;
+    die "DB_PASS 不能包含引号、反斜杠、竖线、& 或空格，换一个（例：Lab_2026_Pass）" ;;
 esac
 
 detect_os
