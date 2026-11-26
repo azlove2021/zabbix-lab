@@ -6,7 +6,7 @@ import sys
 import pycdlib
 
 ROOT = r"D:\VMs"
-PASS = "Zbx_2026_Lab"
+PASS = os.environ.get("LAB_PASS") or sys.exit("请先 export LAB_PASS=实验环境密码")
 
 VMS = [
     dict(
